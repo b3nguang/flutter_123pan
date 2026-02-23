@@ -8,6 +8,8 @@ import '../widgets/settings_dialog.dart';
 import '../widgets/about_dialog.dart';
 import '../theme/app_colors.dart';
 
+bool isMobile(BuildContext context) => MediaQuery.sizeOf(context).width < 700;
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -42,12 +44,26 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sidebarBg = isDark ? CatppuccinMocha.mantle : CatppuccinLatte.mantle;
     final authProvider = context.watch<AuthProvider>();
     final transferProvider = context.watch<TransferProvider>();
-
     final runningCount =
         transferProvider.tasks.where((t) => t.status.index <= 2).length;
+    final mobile = isMobile(context);
+
+    if (mobile) {
+      return _buildMobileLayout(context, isDark, authProvider, runningCount);
+    }
+    return _buildDesktopLayout(context, isDark, authProvider, runningCount);
+  }
+
+  // ── Desktop layout (unchanged) ──────────────────────────────────────────────
+  Widget _buildDesktopLayout(
+    BuildContext context,
+    bool isDark,
+    AuthProvider authProvider,
+    int runningCount,
+  ) {
+    final sidebarBg = isDark ? CatppuccinMocha.mantle : CatppuccinLatte.mantle;
 
     return Scaffold(
       body: Row(
@@ -160,6 +176,113 @@ class _HomeScreenState extends State<HomeScreen> {
               index: _selectedIndex,
               children: _pages,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Mobile layout ────────────────────────────────────────────────────────────
+  Widget _buildMobileLayout(
+    BuildContext context,
+    bool isDark,
+    AuthProvider authProvider,
+    int runningCount,
+  ) {
+    final accent = isDark ? CatppuccinMocha.blue : CatppuccinLatte.blue;
+    final titles = ['文件', '传输'];
+
+    return Scaffold(
+      appBar: AppBar(
+        titleSpacing: 12,
+        title: Row(
+          children: [
+            Icon(Icons.cloud_outlined, size: 22, color: accent),
+            const SizedBox(width: 6),
+            Text(
+              titles[_selectedIndex],
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.bold, color: accent),
+            ),
+          ],
+        ),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded),
+            onSelected: (v) {
+              switch (v) {
+                case 'settings':
+                  SettingsDialog.show(context);
+                  break;
+                case 'about':
+                  AppAboutDialog.show(context);
+                  break;
+                case 'logout':
+                  _logout();
+                  break;
+              }
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'settings',
+                child: const ListTile(
+                  leading: Icon(Icons.settings_outlined),
+                  title: Text('设置'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'about',
+                child: const ListTile(
+                  leading: Icon(Icons.info_outline_rounded),
+                  title: Text('关于'),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'logout',
+                child: ListTile(
+                  leading: Icon(Icons.logout_rounded,
+                      color: Theme.of(context).colorScheme.error),
+                  title: Text('退出登录',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error)),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (i) => setState(() => _selectedIndex = i),
+        destinations: [
+          const NavigationDestination(
+            icon: Icon(Icons.folder_outlined),
+            selectedIcon: Icon(Icons.folder_rounded),
+            label: '文件',
+          ),
+          NavigationDestination(
+            icon: Badge(
+              isLabelVisible: runningCount > 0,
+              label: Text('$runningCount'),
+              child: const Icon(Icons.swap_vert_outlined),
+            ),
+            selectedIcon: Badge(
+              isLabelVisible: runningCount > 0,
+              label: Text('$runningCount'),
+              child: const Icon(Icons.swap_vert_rounded),
+            ),
+            label: '传输',
           ),
         ],
       ),

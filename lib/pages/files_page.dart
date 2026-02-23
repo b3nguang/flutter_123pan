@@ -13,6 +13,7 @@ import '../widgets/file_icon.dart';
 import '../widgets/link_dialog.dart';
 import '../widgets/share_dialog.dart';
 import '../theme/app_colors.dart';
+import '../screens/home_screen.dart' show isMobile;
 
 class FilesPage extends StatefulWidget {
   const FilesPage({super.key});
@@ -239,6 +240,10 @@ class _FilesPageState extends State<FilesPage> {
     final fileProvider = context.watch<FileProvider>();
     final files = fileProvider.files;
 
+    if (isMobile(context)) {
+      return _buildMobileScaffold(context, fileProvider, files, isDark);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -275,6 +280,246 @@ class _FilesPageState extends State<FilesPage> {
           ),
         ),
       ],
+    );
+  }
+
+  // ── Mobile scaffold ──────────────────────────────────────────────────────────
+  Widget _buildMobileScaffold(
+    BuildContext context,
+    FileProvider fileProvider,
+    List<FileItem> files,
+    bool isDark,
+  ) {
+    return Stack(
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildMobileBreadcrumb(context, fileProvider, files),
+            const Divider(height: 1),
+            Expanded(
+              child: _buildMobileFileList(context, fileProvider, files, isDark),
+            ),
+          ],
+        ),
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: _MobileFab(
+            onRefresh: () {
+              _selected.clear();
+              fileProvider.loadFiles(reset: true);
+            },
+            onUpload: _pickAndUpload,
+            onMkdir: _mkdir,
+            onLoadMore: fileProvider.hasMore
+                ? () => fileProvider.loadFiles(reset: false)
+                : null,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileBreadcrumb(
+    BuildContext context,
+    FileProvider fileProvider,
+    List<FileItem> files,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Row(
+        children: [
+          if (!fileProvider.isRoot)
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_rounded, size: 18),
+              onPressed: () {
+                _selected.clear();
+                fileProvider.goUp();
+              },
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          Expanded(child: BreadcrumbBar()),
+          if (fileProvider.totalFiles > 0)
+            Text(
+              '${files.length}${fileProvider.hasMore ? '+' : ''}/${fileProvider.totalFiles}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileFileList(
+    BuildContext context,
+    FileProvider fileProvider,
+    List<FileItem> files,
+    bool isDark,
+  ) {
+    if (fileProvider.state == FileLoadState.loading && files.isEmpty) {
+      return const Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+        CircularProgressIndicator(),
+        SizedBox(height: 16),
+        Text('正在加载...'),
+      ]));
+    }
+    if (fileProvider.state == FileLoadState.error) {
+      return Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+          const SizedBox(height: 12),
+          Text(fileProvider.errorMessage, textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: () => fileProvider.loadFiles(reset: true),
+            child: const Text('重试'),
+          ),
+        ]),
+      );
+    }
+    if (files.isEmpty && fileProvider.state == FileLoadState.loaded) {
+      return const Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.folder_open_rounded, size: 64, color: Colors.grey),
+          SizedBox(height: 12),
+          Text('此文件夹为空', style: TextStyle(color: Colors.grey)),
+        ]),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: files.length + (fileProvider.state == FileLoadState.loading ? 1 : 0),
+      itemBuilder: (ctx, i) {
+        if (i == files.length) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final file = files[i];
+        return _buildMobileFileRow(context, file, i, isDark);
+      },
+    );
+  }
+
+  Widget _buildMobileFileRow(
+    BuildContext context,
+    FileItem file,
+    int index,
+    bool isDark,
+  ) {
+    return ListTile(
+      leading: FileIconWidget(file: file, size: 28),
+      title: Text(
+        file.fileName,
+        style: TextStyle(
+          fontWeight: file.isFolder ? FontWeight.w600 : FontWeight.normal,
+          fontSize: 14,
+        ),
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        file.isFolder ? '文件夹' : file.formattedSize,
+        style: const TextStyle(fontSize: 12),
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.more_vert_rounded),
+        onPressed: () => _showMobileActionSheet(context, file),
+      ),
+      onTap: () {
+        if (file.isFolder) {
+          _selected.clear();
+          context.read<FileProvider>().enterFolder(file);
+        } else {
+          _showMobileActionSheet(context, file);
+        }
+      },
+      onLongPress: () => _showMobileActionSheet(context, file),
+    );
+  }
+
+  void _showMobileActionSheet(BuildContext context, FileItem file) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Row(
+                  children: [
+                    FileIconWidget(file: file, size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        file.fileName,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 15),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              if (!file.isFolder) ...[
+                ListTile(
+                  leading: const Icon(Icons.download_rounded),
+                  title: const Text('下载'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _download(file);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.link_rounded),
+                  title: const Text('显示链接'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showLink(file);
+                  },
+                ),
+              ],
+              ListTile(
+                leading: const Icon(Icons.share_rounded),
+                title: const Text('分享'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _share(file);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.delete_outline_rounded,
+                    color: Theme.of(context).colorScheme.error),
+                title: Text('删除',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.error)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _delete(file);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -568,6 +813,136 @@ class _FilesPageState extends State<FilesPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Mobile FAB speed-dial ─────────────────────────────────────────────────────
+class _MobileFab extends StatefulWidget {
+  final VoidCallback onRefresh;
+  final VoidCallback onUpload;
+  final VoidCallback onMkdir;
+  final VoidCallback? onLoadMore;
+
+  const _MobileFab({
+    required this.onRefresh,
+    required this.onUpload,
+    required this.onMkdir,
+    this.onLoadMore,
+  });
+
+  @override
+  State<_MobileFab> createState() => _MobileFabState();
+}
+
+class _MobileFabState extends State<_MobileFab>
+    with SingleTickerProviderStateMixin {
+  bool _open = false;
+  late final AnimationController _ctrl;
+  late final Animation<double> _fade;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 200));
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _scale = Tween<double>(begin: 0.6, end: 1.0)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() => _open = !_open);
+    if (_open) {
+      _ctrl.forward();
+    } else {
+      _ctrl.reverse();
+    }
+  }
+
+  Widget _miniBtn({
+    required IconData icon,
+    required String label,
+    required VoidCallback? onTap,
+  }) {
+    return FadeTransition(
+      opacity: _fade,
+      child: ScaleTransition(
+        scale: _scale,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(label,
+                    style: const TextStyle(color: Colors.white, fontSize: 12)),
+              ),
+              const SizedBox(width: 8),
+              FloatingActionButton.small(
+                heroTag: label,
+                onPressed: onTap == null
+                    ? null
+                    : () {
+                        _toggle();
+                        onTap();
+                      },
+                child: Icon(icon),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (_open) ...[
+          _miniBtn(
+              icon: Icons.refresh_rounded,
+              label: '刷新',
+              onTap: widget.onRefresh),
+          if (widget.onLoadMore != null)
+            _miniBtn(
+                icon: Icons.expand_more_rounded,
+                label: '加载更多',
+                onTap: widget.onLoadMore),
+          _miniBtn(
+              icon: Icons.create_new_folder_rounded,
+              label: '新建文件夹',
+              onTap: widget.onMkdir),
+          _miniBtn(
+              icon: Icons.upload_file_rounded,
+              label: '上传文件',
+              onTap: widget.onUpload),
+        ],
+        FloatingActionButton(
+          heroTag: 'main_fab',
+          onPressed: _toggle,
+          child: AnimatedRotation(
+            turns: _open ? 0.125 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: const Icon(Icons.add_rounded),
+          ),
+        ),
+      ],
     );
   }
 }
