@@ -109,6 +109,7 @@ class UploadService {
       uploadId: uploadId,
       storageNode: storageNode,
       fileId: upFileId,
+      fileSize: fileSize,
     );
   }
 }
