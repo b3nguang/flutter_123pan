@@ -1,17 +1,35 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'package:crypto/crypto.dart';
 import '../models/transfer_task.dart';
 import 'api_service.dart';
+
+String _md5OfFile(String filePath) {
+  final raf = File(filePath).openSync();
+  final output = AccumulatorSink<Digest>();
+  final input = md5.startChunkedConversion(output);
+  const chunkSize = 1024 * 1024;
+  try {
+    while (true) {
+      final chunk = raf.readSync(chunkSize);
+      if (chunk.isEmpty) break;
+      input.add(chunk);
+    }
+    input.close();
+  } finally {
+    raf.closeSync();
+  }
+  return output.events.single.toString();
+}
 
 class UploadService {
   final ApiService _api;
 
   UploadService(this._api);
 
-  Future<String> _computeMd5(String filePath) async {
-    final input = File(filePath).openRead();
-    final digest = await md5.bind(input).first;
-    return digest.toString();
+  Future<String> _computeMd5(String filePath) {
+    return Isolate.run(() => _md5OfFile(filePath));
   }
 
   Future<void> upload({

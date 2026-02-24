@@ -51,6 +51,7 @@ class TransferProvider extends ChangeNotifier {
     task.status = TransferStatus.running;
     notifyListeners();
 
+    var lastNotify = DateTime.fromMillisecondsSinceEpoch(0);
     try {
       final url = await apiService.getDownloadLink(file);
       await downloadService.download(
@@ -60,7 +61,11 @@ class TransferProvider extends ChangeNotifier {
         controller: controller,
         onProgress: (p) {
           task.progress = p;
-          notifyListeners();
+          final now = DateTime.now();
+          if (p >= 1.0 || now.difference(lastNotify).inMilliseconds >= 300) {
+            lastNotify = now;
+            notifyListeners();
+          }
         },
       );
       if (controller.isCancelled) {
@@ -120,6 +125,7 @@ class TransferProvider extends ChangeNotifier {
     task.status = TransferStatus.running;
     notifyListeners();
 
+    var lastNotify = DateTime.fromMillisecondsSinceEpoch(0);
     try {
       await uploadService.upload(
         filePath: filePath,
@@ -128,7 +134,11 @@ class TransferProvider extends ChangeNotifier {
         controller: controller,
         onProgress: (p) {
           task.progress = p;
-          notifyListeners();
+          final now = DateTime.now();
+          if (p >= 1.0 || now.difference(lastNotify).inMilliseconds >= 300) {
+            lastNotify = now;
+            notifyListeners();
+          }
         },
       );
       if (controller.isCancelled) {
