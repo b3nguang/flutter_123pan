@@ -225,7 +225,9 @@ class _TransferTaskRow extends StatelessWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        '${(task.progress * 100).toStringAsFixed(1)}%',
+                        task.formattedSpeed.isNotEmpty
+                            ? '${(task.progress * 100).toStringAsFixed(1)}%  ${task.formattedSpeed}'
+                            : '${(task.progress * 100).toStringAsFixed(1)}%',
                         style: const TextStyle(fontSize: 11),
                       ),
                     ],
@@ -411,7 +413,9 @@ class _TransferTaskCard extends StatelessWidget {
                   if (task.status == TransferStatus.running ||
                       task.status == TransferStatus.paused)
                     Text(
-                      '${(task.progress * 100).toStringAsFixed(1)}%',
+                      task.formattedSpeed.isNotEmpty
+                          ? '${(task.progress * 100).toStringAsFixed(1)}%  ${task.formattedSpeed}'
+                          : '${(task.progress * 100).toStringAsFixed(1)}%',
                       style: const TextStyle(fontSize: 11),
                     ),
                 ],

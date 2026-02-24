@@ -52,6 +52,7 @@ class TransferProvider extends ChangeNotifier {
     notifyListeners();
 
     var lastNotify = DateTime.fromMillisecondsSinceEpoch(0);
+    var lastBytes = 0.0;
     try {
       final url = await apiService.getDownloadLink(file);
       await downloadService.download(
@@ -62,7 +63,14 @@ class TransferProvider extends ChangeNotifier {
         onProgress: (p) {
           task.progress = p;
           final now = DateTime.now();
-          if (p >= 1.0 || now.difference(lastNotify).inMilliseconds >= 300) {
+          final elapsed = now.difference(lastNotify).inMilliseconds;
+          if (p >= 1.0 || elapsed >= 300) {
+            final currentBytes = p * task.fileSize;
+            if (elapsed > 0) {
+              task.speedBytesPerSec =
+                  ((currentBytes - lastBytes) / elapsed * 1000).round();
+            }
+            lastBytes = currentBytes;
             lastNotify = now;
             notifyListeners();
           }
@@ -82,6 +90,7 @@ class TransferProvider extends ChangeNotifier {
         task.errorMessage = e.toString();
       }
     }
+    task.speedBytesPerSec = 0;
     notifyListeners();
   }
 
@@ -126,6 +135,7 @@ class TransferProvider extends ChangeNotifier {
     notifyListeners();
 
     var lastNotify = DateTime.fromMillisecondsSinceEpoch(0);
+    var lastBytes = 0.0;
     try {
       await uploadService.upload(
         filePath: filePath,
@@ -135,7 +145,14 @@ class TransferProvider extends ChangeNotifier {
         onProgress: (p) {
           task.progress = p;
           final now = DateTime.now();
-          if (p >= 1.0 || now.difference(lastNotify).inMilliseconds >= 300) {
+          final elapsed = now.difference(lastNotify).inMilliseconds;
+          if (p >= 1.0 || elapsed >= 300) {
+            final currentBytes = p * task.fileSize;
+            if (elapsed > 0) {
+              task.speedBytesPerSec =
+                  ((currentBytes - lastBytes) / elapsed * 1000).round();
+            }
+            lastBytes = currentBytes;
             lastNotify = now;
             notifyListeners();
           }
@@ -156,6 +173,7 @@ class TransferProvider extends ChangeNotifier {
         task.errorMessage = e.toString();
       }
     }
+    task.speedBytesPerSec = 0;
     notifyListeners();
   }
 

@@ -12,6 +12,7 @@ class TransferTask {
   double progress;
   TransferStatus status;
   String? errorMessage;
+  int speedBytesPerSec;
 
   TransferTask({
     required this.id,
@@ -21,6 +22,7 @@ class TransferTask {
     this.progress = 0.0,
     this.status = TransferStatus.waiting,
     this.errorMessage,
+    this.speedBytesPerSec = 0,
   });
 
   String get typeLabel => type == TransferType.download ? '下载' : '上传';
@@ -40,6 +42,17 @@ class TransferTask {
       case TransferStatus.cancelled:
         return '已取消';
     }
+  }
+
+  String get formattedSpeed {
+    if (speedBytesPerSec <= 0) return '';
+    if (speedBytesPerSec >= 1073741824)
+      return '${(speedBytesPerSec / 1073741824).toStringAsFixed(1)} GB/s';
+    if (speedBytesPerSec >= 1048576)
+      return '${(speedBytesPerSec / 1048576).toStringAsFixed(1)} MB/s';
+    if (speedBytesPerSec >= 1024)
+      return '${(speedBytesPerSec / 1024).toStringAsFixed(1)} KB/s';
+    return '$speedBytesPerSec B/s';
   }
 
   String get formattedSize {
