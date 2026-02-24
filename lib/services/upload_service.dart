@@ -1,14 +1,21 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 import 'package:crypto/crypto.dart';
 import '../models/transfer_task.dart';
 import 'api_service.dart';
 
+class _DigestSink implements Sink<Digest> {
+  Digest? value;
+  @override
+  void add(Digest data) => value = data;
+  @override
+  void close() {}
+}
+
 String _md5OfFile(String filePath) {
   final raf = File(filePath).openSync();
-  final output = AccumulatorSink<Digest>();
-  final input = md5.startChunkedConversion(output);
+  final sink = _DigestSink();
+  final input = md5.startChunkedConversion(sink);
   const chunkSize = 1024 * 1024;
   try {
     while (true) {
@@ -20,7 +27,7 @@ String _md5OfFile(String filePath) {
   } finally {
     raf.closeSync();
   }
-  return output.events.single.toString();
+  return sink.value!.toString();
 }
 
 class UploadService {
