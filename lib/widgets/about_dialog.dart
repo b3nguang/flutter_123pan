@@ -40,11 +40,11 @@ class AppAboutDialog extends StatelessWidget {
             const SizedBox(height: 12),
             const Divider(),
             const SizedBox(height: 8),
-            _row('开发者', 'Qxyz17 & xhdndmm'),
+            _row('开发者', 'b3nguang'),
             const SizedBox(height: 6),
             InkWell(
               onTap: () {
-                Clipboard.setData(const ClipboardData(text: 'https://github.com/123panNextGen/123pan'));
+                Clipboard.setData(const ClipboardData(text: 'https://github.com/b3nguang/flutter_123pan'));
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('GitHub 地址已复制'), duration: Duration(seconds: 2)),
                 );
