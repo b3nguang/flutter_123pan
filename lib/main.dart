@@ -8,6 +8,7 @@ import 'services/api_service.dart';
 import 'services/config_service.dart';
 import 'services/download_service.dart';
 import 'services/upload_service.dart';
+import 'providers/webdav_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
@@ -49,6 +50,12 @@ class Pan123App extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => SettingsProvider(configService: configService),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => WebDavProvider(
+            apiService: apiService,
+            configService: configService,
+          )..loadConfig(),
         ),
       ],
       child: MaterialApp(

@@ -6,6 +6,8 @@ import '../providers/auth_provider.dart';
 import '../providers/transfer_provider.dart';
 import '../widgets/settings_dialog.dart';
 import '../widgets/about_dialog.dart';
+import '../widgets/webdav_dialog.dart';
+import '../providers/webdav_provider.dart';
 import '../theme/app_colors.dart';
 
 bool isMobile(BuildContext context) => MediaQuery.sizeOf(context).width < 700;
@@ -149,6 +151,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: isDark ? CatppuccinMocha.surface1 : CatppuccinLatte.surface0,
                 ),
                 _SidebarIconBtn(
+                    icon: Icons.cloud_sync_outlined,
+                    tooltip: 'WebDAV',
+                    onTap: () => WebDavDialog.show(context),
+                    isDark: isDark,
+                    badge: context.watch<WebDavProvider>().isRunning ? '●' : null),
+                _SidebarIconBtn(
                     icon: Icons.settings_outlined,
                     tooltip: '设置',
                     onTap: () => SettingsDialog.show(context),
@@ -211,6 +219,9 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.more_vert_rounded),
             onSelected: (v) {
               switch (v) {
+                case 'webdav':
+                  WebDavDialog.show(context);
+                  break;
                 case 'settings':
                   SettingsDialog.show(context);
                   break;
@@ -223,6 +234,18 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
             itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'webdav',
+                child: ListTile(
+                  leading: const Icon(Icons.cloud_sync_outlined),
+                  title: const Text('WebDAV 服务'),
+                  trailing: context.watch<WebDavProvider>().isRunning
+                      ? const Icon(Icons.circle, color: Colors.green, size: 10)
+                      : null,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
               PopupMenuItem(
                 value: 'settings',
                 child: const ListTile(
@@ -368,12 +391,14 @@ class _SidebarIconBtn extends StatelessWidget {
   final String tooltip;
   final VoidCallback onTap;
   final bool isDark;
+  final String? badge;
 
   const _SidebarIconBtn({
     required this.icon,
     required this.tooltip,
     required this.onTap,
     required this.isDark,
+    this.badge,
   });
 
   @override
@@ -387,7 +412,25 @@ class _SidebarIconBtn extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           child: Row(
             children: [
-              Icon(icon, color: fg, size: 20),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(icon, color: fg, size: 20),
+                  if (badge != null)
+                    Positioned(
+                      right: -4,
+                      top: -4,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
               const SizedBox(width: 10),
               Text(tooltip, style: TextStyle(color: fg, fontSize: 13)),
             ],

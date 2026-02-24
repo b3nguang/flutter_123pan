@@ -1,28 +1,89 @@
+class WebDavConfig {
+  final bool enabled;
+  final int port;
+  final String username;
+  final String password;
+  final String basePath;
+
+  const WebDavConfig({
+    this.enabled = false,
+    this.port = 8090,
+    this.username = '',
+    this.password = '',
+    this.basePath = '/dav',
+  });
+
+  factory WebDavConfig.fromJson(Map<String, dynamic> json) {
+    return WebDavConfig(
+      enabled: json['enabled'] as bool? ?? false,
+      port: json['port'] as int? ?? 8090,
+      username: json['username'] as String? ?? '',
+      password: json['password'] as String? ?? '',
+      basePath: json['basePath'] as String? ?? '/dav',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'enabled': enabled,
+        'port': port,
+        'username': username,
+        'password': password,
+        'basePath': basePath,
+      };
+
+  WebDavConfig copyWith({
+    bool? enabled,
+    int? port,
+    String? username,
+    String? password,
+    String? basePath,
+  }) {
+    return WebDavConfig(
+      enabled: enabled ?? this.enabled,
+      port: port ?? this.port,
+      username: username ?? this.username,
+      password: password ?? this.password,
+      basePath: basePath ?? this.basePath,
+    );
+  }
+}
+
 class AppSettings {
   final String defaultDownloadPath;
   final bool askDownloadLocation;
+  final WebDavConfig webDav;
 
   const AppSettings({
     required this.defaultDownloadPath,
     this.askDownloadLocation = true,
+    this.webDav = const WebDavConfig(),
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
     return AppSettings(
       defaultDownloadPath: json['defaultDownloadPath'] as String? ?? '',
       askDownloadLocation: json['askDownloadLocation'] as bool? ?? true,
+      webDav: json['webDav'] != null
+          ? WebDavConfig.fromJson(json['webDav'] as Map<String, dynamic>)
+          : const WebDavConfig(),
     );
   }
 
   Map<String, dynamic> toJson() => {
         'defaultDownloadPath': defaultDownloadPath,
         'askDownloadLocation': askDownloadLocation,
+        'webDav': webDav.toJson(),
       };
 
-  AppSettings copyWith({String? defaultDownloadPath, bool? askDownloadLocation}) {
+  AppSettings copyWith({
+    String? defaultDownloadPath,
+    bool? askDownloadLocation,
+    WebDavConfig? webDav,
+  }) {
     return AppSettings(
       defaultDownloadPath: defaultDownloadPath ?? this.defaultDownloadPath,
       askDownloadLocation: askDownloadLocation ?? this.askDownloadLocation,
+      webDav: webDav ?? this.webDav,
     );
   }
 }
